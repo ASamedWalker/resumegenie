@@ -10,7 +10,7 @@ from services.resume_services import (
     delete_resume,
 )
 
-router = APIRouter(prefix="/resume", tags=["Resume"])
+router = APIRouter(prefix="/resumes", tags=["Resume"])
 
 
 @router.post("/", response_model=Resume, status_code=status.HTTP_201_CREATED)
@@ -20,7 +20,10 @@ async def create_resume_endpoint(
     db: AsyncSession = Depends(get_session),
 ) -> Resume:
     try:
-        return await create_resume(db, resume_data, job_description)
+        resume = await create_resume(db, resume_data, job_description)
+        if not resume:
+            raise HTTPException(status_code=404, detail="Failed to create resume")
+        return resume
     except HTTPException as e:
         raise HTTPException(status_code=e.status_code, detail=str(e))
 
@@ -45,6 +48,7 @@ async def get_all_resumes_endpoint(
     except HTTPException as e:
         raise HTTPException(status_code=e.status_code, detail=str(e))
 
+
 @router.put("/{resume_id}", response_model=Resume)
 async def update_resume_endpoint(
     resume_id: int,
@@ -66,32 +70,3 @@ async def delete_resume_endpoint(
         return await delete_resume(db, resume_id)
     except HTTPException as e:
         raise HTTPException(status_code=e.status_code, detail=str(e))
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

@@ -19,7 +19,7 @@ async def create_resume(session: AsyncSession, resume_data: dict, job_descriptio
         session.add(new_resume)
         await session.commit()
         await session.refresh(new_resume)
-        return resume
+        return new_resume
     except SQLAlchemyError as e:
         await session.rollback()
         raise HTTPException(status_code=400, detail=str(e))
