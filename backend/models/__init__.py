@@ -1,11 +1,10 @@
 from .resume import Resume
 from .projects import Projects
-from .skills import Skills
+from .skills import Skill
 from .certifications import Certifications
 from .education import EducationDetail
 from .experience import ExperienceDetail
 from .user import User
-from .base import Base
 
 
 __all__ = [
@@ -16,5 +15,4 @@ __all__ = [
     "EducationDetail",
     "ExperienceDetail",
     "User",
-    "Base",
 ]

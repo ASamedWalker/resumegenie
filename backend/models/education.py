@@ -1,9 +1,9 @@
 from typing import List, Optional
 from sqlmodel import Field, SQLModel, Relationship
 from datetime import date
-from .base import Base
 
-class EducationDetail(Base, table=True):
+
+class EducationDetail(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     resume_id: int = Field(foreign_key="resume.id")
     institution_name: str = Field(max_length=100)

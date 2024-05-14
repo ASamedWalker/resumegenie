@@ -15,3 +15,4 @@ async def test_create_resume_endpoint():
         data = response.json()
         assert "skills" in data, "Skills key is missing in response"
         assert "Python" in data["skills"], "Python is not listed in skills"
+        

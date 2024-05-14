@@ -12,13 +12,20 @@ logger = logging.getLogger(__name__)
 
 async def create_resume(session: AsyncSession, resume_data: dict, job_description: str):
     try:
-        skills = extract_skills(job_description)
-        resume_data["skills"] = skills
+        skill_names = extract_skills(job_description)
+        if not skill_names:
+            skill_names = set()
 
-        new_resume = Resume(**resume_data)
-        session.add(new_resume)
-        await session.commit()
-        await session.refresh(new_resume)
+        # Create new Resume instance
+        async with session.begin():
+            new_resume = Resume(**resume_data)
+            session.add(new_resume)
+            await session.commit()
+            skills = [Skill(name=name, resume_id=new_resume.id, proficiency_level="Unknown") for name in skill_names]
+            for skill in skills:
+                session.add(skill)
+            await session.commit()
+            await session.refresh(new_resume)
         return new_resume
     except SQLAlchemyError as e:
         await session.rollback()

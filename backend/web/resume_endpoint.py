@@ -9,11 +9,12 @@ from services.resume_services import (
     update_resume,
     delete_resume,
 )
+from schemas.resume_schema import ResumeCreate, ResumeResponse
 
 router = APIRouter(prefix="/resumes", tags=["Resume"])
 
 
-@router.post("/", response_model=Resume, status_code=status.HTTP_201_CREATED)
+@router.post("/", response_model=ResumeCreate, status_code=status.HTTP_201_CREATED)
 async def create_resume_endpoint(
     resume_data: Resume,
     job_description: str,

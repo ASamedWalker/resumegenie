@@ -20,14 +20,13 @@ AsyncSessionLocal = sessionmaker(
 
 async def create_tables():
     async with engine.begin() as conn:
-      try:
-        await conn.run_sync(SQLModel.metadata.create_all)
-        # await conn.run_sync(SQLModel.metadata.drop_all)
-      except Exception as e:
-        print("An error occurred while creating tables", e)
-
+        try:
+            await conn.run_sync(SQLModel.metadata.create_all)
+            # await conn.run_sync(SQLModel.metadata.drop_all)
+        except Exception as e:
+            print("An error occurred while creating tables", e)
 
 
 async def get_session() -> AsyncSession:
-  async with AsyncSessionLocal() as session:
-    yield session
+    async with AsyncSessionLocal() as session:
+        yield session
