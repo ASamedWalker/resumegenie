@@ -9,24 +9,25 @@ from services.resume_services import (
     update_resume,
     delete_resume,
 )
-from schemas.resume_schema import ResumeCreate, ResumeResponse
+from schemas.resume_schema import ResumeCreate, ResumeRead
 
 router = APIRouter(prefix="/resumes", tags=["Resume"])
 
 
-@router.post("/", response_model=ResumeCreate, status_code=status.HTTP_201_CREATED)
+@router.post("/", response_model=ResumeRead, status_code=status.HTTP_201_CREATED)
 async def create_resume_endpoint(
-    resume_data: Resume,
-    job_description: str,
+    resume_data: ResumeCreate,
     db: AsyncSession = Depends(get_session),
 ) -> Resume:
     try:
-        resume = await create_resume(db, resume_data, job_description)
-        if not resume:
+        new_resume = await create_resume(db, resume_data)
+        if not new_resume:
             raise HTTPException(status_code=404, detail="Failed to create resume")
-        return resume
+        return new_resume
     except HTTPException as e:
         raise HTTPException(status_code=e.status_code, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"An unexpected error occurred: {str(e)}")
 
 
 @router.get("/{resume_id}", response_model=Resume)

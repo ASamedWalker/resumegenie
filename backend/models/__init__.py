@@ -1,18 +1,17 @@
 from .resume import Resume
-from .projects import Projects
-from .skills import Skill
-from .certifications import Certifications
-from .education import EducationDetail
-from .experience import ExperienceDetail
-from .user import User
+from .project import Project
+from .skill import Skill
+# from .certifications import Certification
+from .education import Education
+# from .experience import ExperienceDetail
+
 
 
 __all__ = [
     "Resume",
-    "ProjectDetail",
+    "Project",
     "Skill",
     "Certification",
-    "EducationDetail",
+    "Education",
     "ExperienceDetail",
-    "User",
 ]

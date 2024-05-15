@@ -5,31 +5,29 @@ from sqlalchemy.exc import SQLAlchemyError
 from fastapi import HTTPException
 import logging
 
-from models.resume import Resume
+from models import Resume, Education, Skill, Project
+from schemas.resume_schema import ResumeCreate, ResumeUpdate
 
 logger = logging.getLogger(__name__)
 
 
-async def create_resume(session: AsyncSession, resume_data: dict, job_description: str):
+async def create_resume(session: AsyncSession, resume_data: ResumeCreate):
     try:
-        skill_names = extract_skills(job_description)
-        if not skill_names:
-            skill_names = set()
-
-        # Create new Resume instance
-        async with session.begin():
-            new_resume = Resume(**resume_data)
-            session.add(new_resume)
-            await session.commit()
-            skills = [Skill(name=name, resume_id=new_resume.id, proficiency_level="Unknown") for name in skill_names]
-            for skill in skills:
-                session.add(skill)
-            await session.commit()
-            await session.refresh(new_resume)
+        # Convert Pydantic model to dictionary for ORM model creation
+        resume_dict = resume_data.dict()
+        new_resume = Resume(**resume_data.dict(exclude_unset=True))
+        session.add(new_resume)
+        await session.commit()
+        await session.refresh(new_resume)
         return new_resume
     except SQLAlchemyError as e:
         await session.rollback()
         raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        await session.rollback()
+        raise HTTPException(
+            status_code=500, detail=f"An unexpected error occurred: {str(e)}"
+        )
 
 
 async def get_resume(session: AsyncSession, resume_id: int):

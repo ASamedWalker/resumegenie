@@ -1,7 +1,10 @@
 import os
+import logging
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlmodel import SQLModel
 from sqlalchemy.orm import sessionmaker
+from contextlib import asynccontextmanager
+
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -25,8 +28,12 @@ async def create_tables():
             # await conn.run_sync(SQLModel.metadata.drop_all)
         except Exception as e:
             print("An error occurred while creating tables", e)
+            raise
 
 
 async def get_session() -> AsyncSession:
     async with AsyncSessionLocal() as session:
         yield session
+
+
+logging.basicConfig(level=logging.INFO)
