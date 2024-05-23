@@ -5,7 +5,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from fastapi import HTTPException
 import logging
 
-from models import Resume, Education, Skill, Project
+from models.resume import Resume
 from schemas.resume_schema import ResumeCreate, ResumeUpdate
 
 logger = logging.getLogger(__name__)

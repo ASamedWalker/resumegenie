@@ -3,7 +3,12 @@ from contextlib import asynccontextmanager
 from fastapi.middleware.cors import CORSMiddleware
 from web import (
     resume_endpoint,
-    template_endpoint
+    template_endpoint,
+    skill_endpoint,
+    education_endpoint,
+    experience_endpoint,
+    certification_endpoint,
+    project_endpoint,
 )
 from data.database import create_tables
 
@@ -29,4 +34,8 @@ app = FastAPI(lifespan=app_lifespan)
 
 app.include_router(resume_endpoint.router)
 app.include_router(template_endpoint.router)
-
+app.include_router(skill_endpoint.router)
+app.include_router(education_endpoint.router)
+app.include_router(experience_endpoint.router)
+app.include_router(certification_endpoint.router)
+app.include_router(project_endpoint.router)

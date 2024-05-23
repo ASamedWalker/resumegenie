@@ -1,9 +1,9 @@
 from .resume import Resume
 from .project import Project
 from .skill import Skill
-# from .certifications import Certification
+from .certification import Certification
 from .education import Education
-# from .experience import ExperienceDetail
+from .experience import Experience
 
 
 
@@ -13,5 +13,5 @@ __all__ = [
     "Skill",
     "Certification",
     "Education",
-    "ExperienceDetail",
+    "Experience",
 ]

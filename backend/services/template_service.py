@@ -7,6 +7,11 @@ import logging
 
 from models.templates import Template
 from schemas.template_schema import TemplateCreate, TemplateUpdate, TemplateRead
+from jinja2 import Environment, FileSystemLoader, select_autoescape
+
+env = Environment(
+    loader=FileSystemLoader("templates"), autoescape=select_autoescape(["html", "xml"])
+)
 
 
 async def create_template(
@@ -62,3 +67,38 @@ async def update_template(
         raise HTTPException(
             status_code=500, detail=f"An unexpected error occurred: {str(e)}"
         )
+
+
+async def get_all_templates(session: AsyncSession):
+    try:
+        statement = select(Template)
+        result = await session.execute(statement)
+        templates = result.scalars().all()
+        return templates
+    except SQLAlchemyError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+async def delete_template(template_id: int, session: AsyncSession) -> Template:
+    try:
+        statement = select(Template).where(Template.id == template_id)
+        result = await session.execute(statement)
+        db_template = result.scalars().first()
+        if db_template is None:
+            raise HTTPException(status_code=404, detail="Template not found")
+        session.delete(db_template)
+        await session.commit()
+        return db_template
+    except SQLAlchemyError as e:
+        await session.rollback()
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        await session.rollback()
+        raise HTTPException(
+            status_code=500, detail=f"An unexpected error occurred: {str(e)}"
+        )
+
+
+async def render_resume(template_name, resume_data):
+    template = env.get_template(template_name)
+    return template.render(resume_data)

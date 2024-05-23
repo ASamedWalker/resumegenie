@@ -12,6 +12,7 @@ from schemas.template_schema import TemplateCreate, TemplateRead, TemplateUpdate
 
 router = APIRouter(prefix="/templates", tags=["templates"])
 
+
 @router.post("/", response_model=TemplateRead, status_code=status.HTTP_201_CREATED)
 async def create_template_endpoint(
     template_data: TemplateCreate,
@@ -25,7 +26,9 @@ async def create_template_endpoint(
     except HTTPException as e:
         raise HTTPException(status_code=e.status_code, detail=str(e))
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"An unexpected error occurred: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"An unexpected error occurred: {str(e)}"
+        )
 
 
 @router.get("/{template_id}", response_model=TemplateRead)
@@ -38,6 +41,7 @@ async def get_template_endpoint(
     except HTTPException as e:
         raise HTTPException(status_code=e.status_code, detail=str(e))
 
+
 @router.put("/{template_id}", response_model=TemplateRead)
 async def update_template_endpoint(
     template_id: int,
@@ -46,5 +50,16 @@ async def update_template_endpoint(
 ) -> Template:
     try:
         return await update_template(template_id, template_data, db)
+    except HTTPException as e:
+        raise HTTPException(status_code=e.status_code, detail=str(e))
+
+
+@router.delete("/{template_id}", response_model=TemplateRead)
+async def delete_template_endpoint(
+    template_id: int,
+    db: AsyncSession = Depends(get_session),
+) -> Template:
+    try:
+        return await delete_template(template_id, db)
     except HTTPException as e:
         raise HTTPException(status_code=e.status_code, detail=str(e))
