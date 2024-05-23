@@ -2,7 +2,8 @@ from fastapi import FastAPI
 from contextlib import asynccontextmanager
 from fastapi.middleware.cors import CORSMiddleware
 from web import (
-    resume_endpoint
+    resume_endpoint,
+    template_endpoint
 )
 from data.database import create_tables
 
@@ -27,4 +28,5 @@ app = FastAPI(lifespan=app_lifespan)
 
 
 app.include_router(resume_endpoint.router)
+app.include_router(template_endpoint.router)
 
