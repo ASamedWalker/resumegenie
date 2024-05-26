@@ -9,6 +9,10 @@ from services.resume_services import (
     update_resume,
     delete_resume,
 )
+import logging
+
+
+logger = logging.getLogger(__name__)
 from schemas.resume_schema import ResumeCreate, ResumeRead
 
 router = APIRouter(prefix="/resumes", tags=["Resume"])
@@ -21,13 +25,9 @@ async def create_resume_endpoint(
 ) -> Resume:
     try:
         new_resume = await create_resume(db, resume_data)
-        if not new_resume:
-            raise HTTPException(status_code=404, detail="Failed to create resume")
         return new_resume
     except HTTPException as e:
         raise HTTPException(status_code=e.status_code, detail=str(e))
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"An unexpected error occurred: {str(e)}")
 
 
 @router.get("/{resume_id}", response_model=Resume)
@@ -37,6 +37,9 @@ async def get_resume_endpoint(
 ) -> Resume:
     try:
         return await get_resume(db, resume_id)
+        if not resume:
+            raise HTTPException(status_code=404, detail="Resume not found")
+        return ResumeRead.from_orm(resume)
     except HTTPException as e:
         raise HTTPException(status_code=e.status_code, detail=str(e))
 
