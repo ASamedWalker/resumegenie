@@ -54,11 +54,11 @@ async def update_template_endpoint(
         raise HTTPException(status_code=e.status_code, detail=str(e))
 
 
-@router.delete("/{template_id}", response_model=TemplateRead)
+@router.delete("/{template_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_template_endpoint(
     template_id: int,
     db: AsyncSession = Depends(get_session),
-) -> Template:
+):
     try:
         return await delete_template(template_id, db)
     except HTTPException as e:

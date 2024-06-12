@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from data.database import get_session
 from sqlmodel import select
@@ -67,11 +67,11 @@ async def update_experience_endpoint(
         raise HTTPException(status_code=e.status_code, detail=str(e))
 
 
-@router.delete("/{experience_id}", response_model=Experience)
+@router.delete("/{experience_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_experience_endpoint(
     experience_id: int,
     db: AsyncSession = Depends(get_session),
-) -> Experience:
+):
     try:
         return await delete_experience(db, experience_id)
     except HTTPException as e:

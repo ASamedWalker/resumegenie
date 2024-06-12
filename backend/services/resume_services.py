@@ -35,18 +35,21 @@ async def create_resume(session: AsyncSession, resume_data: ResumeCreate):
 
 async def get_resume(session: AsyncSession, resume_id: int):
     try:
-        statement = select(Resume).options(
-            selectinload(Resume.skills),
-            selectinload(Resume.projects),
-            selectinload(Resume.experiences),
-            selectinload(Resume.certifications)
-        ).where(Resume.id == resume_id)
+        statement = (
+            select(Resume)
+            .options(
+                selectinload(Resume.skills),
+                selectinload(Resume.projects),
+                selectinload(Resume.experiences),
+                selectinload(Resume.certifications),
+            )
+            .where(Resume.id == resume_id)
+        )
         result = await session.execute(statement)
         resume = result.scalars().first()
         return resume
     except SQLAlchemyError as e:
         raise HTTPException(status_code=400, detail=str(e))
-    
 
 
 async def get_all_resumes(session: AsyncSession):
@@ -59,19 +62,27 @@ async def get_all_resumes(session: AsyncSession):
         raise HTTPException(status_code=400, detail=str(e))
 
 
-async def update_resume(session: AsyncSession, resume_id: int, update_data: dict):
+async def update_resume(
+    session: AsyncSession, resume_id: int, update_data: ResumeUpdate
+):
     try:
         statement = select(Resume).where(Resume.id == resume_id)
         result = await session.execute(statement)
         db_resume = result.scalars().first()
         if db_resume is None:
             raise HTTPException(status_code=404, detail="Resume not found")
-        for key, value in update_data.items():
+
+        # Convert Pydantic model to dictionary excluding unset values
+        update_dict = update_data.dict(exclude_unset=True)
+
+        for key, value in update_dict.items():
             setattr(db_resume, key, value)
+
         session.add(db_resume)
         await session.commit()
         await session.refresh(db_resume)
         return db_resume
+
     except SQLAlchemyError as e:
         await session.rollback()
         raise HTTPException(status_code=400, detail=str(e))

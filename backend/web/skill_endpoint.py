@@ -72,11 +72,11 @@ async def update_skill_endpoint(
         )
 
 
-@router.delete("/{skill_id}", response_model=SkillRead)
+@router.delete("/{skill_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_skill_endpoint(
     skill_id: int,
     db: AsyncSession = Depends(get_session),
-) -> Skill:
+):
     try:
         return await delete_skill_db(skill_id, db)
     except HTTPException as e:

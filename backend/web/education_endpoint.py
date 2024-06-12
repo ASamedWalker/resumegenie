@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from data.database import get_session
 from sqlmodel import select
@@ -67,11 +67,11 @@ async def update_education_endpoint(
         raise HTTPException(status_code=e.status_code, detail=str(e))
 
 
-@router.delete("/{education_id}", response_model=Education)
+@router.delete("/{education_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_education_endpoint(
     education_id: int,
     db: AsyncSession = Depends(get_session),
-) -> Education:
+):
     try:
         return await delete_education(db, education_id)
     except HTTPException as e:

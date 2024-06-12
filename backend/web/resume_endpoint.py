@@ -66,11 +66,11 @@ async def update_resume_endpoint(
         raise HTTPException(status_code=e.status_code, detail=str(e))
 
 
-@router.delete("/{resume_id}", response_model=Resume)
+@router.delete("/{resume_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_resume_endpoint(
     resume_id: int,
     db: AsyncSession = Depends(get_session),
-) -> Resume:
+):
     try:
         return await delete_resume(db, resume_id)
     except HTTPException as e:

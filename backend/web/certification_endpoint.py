@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from data.database import get_session
 from sqlmodel import select
@@ -73,11 +73,11 @@ async def update_certification_endpoint(
         raise HTTPException(status_code=e.status_code, detail=str(e))
 
 
-@router.delete("/{certification_id}", response_model=Certification)
+@router.delete("/{certification_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_certification_endpoint(
     certification_id: int,
     db: AsyncSession = Depends(get_session),
-) -> Certification:
+):
     try:
         return await delete_certification(db, certification_id)
     except HTTPException as e:
