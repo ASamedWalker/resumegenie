@@ -1,19 +1,6 @@
-from init import conn, curs, IntegrityError
 from model.resume import Resume
 from error import Missing, Duplicate
-
-
-curs.execute(
-    """
-    CREATE TABLE IF NOT EXISTS resume (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT NOT NULL,
-        email TEXT NOT NULL,
-        phone TEXT NOT NULL,
-        summary TEXT NOT NULL
-    )
-    """
-)
+from data.init import get_db
 
 
 def row_to_model(row: tuple) -> Resume:
@@ -25,50 +12,52 @@ def model_to_dict(resume: Resume) -> dict:
     return resume.dict()
 
 
-def get_one(name: str) -> Resume:
-    qry = "SELECT * FROM resume WHERE name=:name"
-    params = {"name": name}
-    curs.execute(qry, params)
-    row = curs.fetchone()
+def get_one(id: int) -> Resume:
+    with get_db() as cursor:
+        cursor.execute("SELECT * FROM resume WHERE id = ?", (id,))
+        row = cursor.fetchone()
     if row:
         return row_to_model(row)
     else:
-        raise Missing(msg=f"Resume {name} not found")
+        raise Missing(msg=f"Resume with id {id} not found")
 
 
 def get_all() -> list[Resume]:
-    qry = "SELECT * FROM resume"
-    curs.execute(qry)
-    rows = list(curs.fetchall())
+    with get_db() as cursor:
+        cursor.execute("SELECT * FROM resume")
+        rows = cursor.fetchall()
     return [row_to_model(row) for row in rows]
 
 
 def create(resume: Resume) -> Resume:
-    qry = "INSERT INTO resume (name, email, phone, summary) VALUES (:name, :email, :phone, :summary)"
-    params = model_to_dict(resume)
-    try:
-        curs.execute(qry, params)
-    except IntegrityError:
-        raise Duplicate(msg=f"Resume {resume.name} already exists")
-    return get_one(resume.name)
+    with get_db() as cursor:
+        params = model_to_dict(resume)
+        try:
+            cursor.execute(
+                "INSERT INTO resume (name, email, phone, summary) VALUES (:name, :email, :phone, :summary)",
+                params,
+            )
+            return get_one(cursor.lastrowid)  # Fetch the newly created resume
+        except IntegrityError as e:
+            raise Duplicate(msg=f"Resume {resume.name} already exists")
 
 
-def modify(resume: Resume) -> Resume:
-    if not get_one(resume.name):
-        return None
-    qry = "UPDATE resume SET email=:email, phone=:phone, summary=:summary WHERE name=:name"
-    params = model_to_dict(resume)
-    curs.execute(qry, params)
-    if curs.rowcount == 1:
-        return get_one(resume.name)
-    else:
-        raise Missing(msg=f"Resume {resume.name} not found")
+def modify(id: int, resume: Resume) -> Resume:
+    with get_db() as cursor:
+        params = model_to_dict(resume)
+        params["id"] = id
+        cursor.execute(
+            "UPDATE resume SET name=:name, email=:email, phone=:phone, summary=:summary WHERE id=:id",
+            params,
+        )
+        if cursor.rowcount == 0:
+            raise Missing(msg=f"Resume with id {id} not found")
+    return get_one(id)
 
 
-def delete(resume: Resume) -> bool:
-    if not name: return False
-    qry = "DELETE FROM resume WHERE name=:name"
-    params = {"name": resume.name}
-    curs.execute(qry, params)
-    if curs.rowcount == 1:
-        return Missing(msg=f"Resume {resume.name} not found")
+def delete(id: int) -> bool:
+    with get_db() as cursor:
+        cursor.execute("DELETE FROM resume WHERE id = ?", (id,))
+        if cursor.rowcount == 0:
+            raise Missing(msg=f"Resume with id {id} not found")
+    return True

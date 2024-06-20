@@ -1,26 +1,32 @@
 import os
 from pathlib import Path
-from sqlite3 import connect, Connection, Cursor, IntegrityError
-
-conn: Connection | None = None
-curs: Cursor | None = None
+from sqlite3 import connect, Connection
+from contextlib import contextmanager
 
 
-def get_db(name: str | None = None, reset: bool = False) -> Connection:
-    global conn, curs
-    if conn:
-        if not reset:
-            return
-        conn = None
-    if not name:
-        name = os.getenv("RESUME_SQLITE_DB", "resume.db")
-        top_dir = Path(__file__).resolve().parents[1]
-        db_dir = top_dir / "db"
-        db_name = "resume.db"
-        db_path = str(db_dir / db_name)
-        name = os.getenv("RESUME_SQLITE_DB", db_path)
-    conn = connect(name, check_same_thread=False)
-    curs = conn.cursor()
+# Function to determine the database path
+def get_db_path():
+    default_path = Path(__file__).resolve().parents[1] / "db" / "resume.db"
+    return os.getenv("RESUME_SQLITE_DB", str(default_path))
 
 
-get_db()
+# Context manager for managing database connections
+@contextmanager
+def get_db():
+    conn: Connection = None
+    try:
+        db_path = get_db_path()
+        conn = connect(db_path, check_same_thread=False)
+        yield conn.cursor()
+    finally:
+        if conn:
+            conn.close()
+
+
+# Example usage within your application
+if __name__ == "__main__":
+    with get_db() as cursor:
+        cursor.execute(
+            "CREATE TABLE IF NOT EXISTS resume (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, email TEXT NOT NULL, phone TEXT NOT NULL, summary TEXT NOT NULL)"
+        )
+        print("Database and table ensured.")
