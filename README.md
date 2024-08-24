@@ -1,4 +1,5 @@
-# RESUMEGENIE
+# RESUMEGINIE
+
 ResumeGenie is a powerful tool that helps you create professional resumes with ease. It provides a user-friendly interface and a wide range of customizable templates to choose from.
 
 With ResumeGenie, you can effortlessly showcase your skills, experience, and achievements in a visually appealing and organized manner. The tool allows you to add sections for your education, work history, projects, certifications, and more.
@@ -8,6 +9,7 @@ ResumeGenie also offers advanced features such as keyword optimization, which he
 Whether you're a seasoned professional or just starting your career, ResumeGenie is the perfect companion to create a compelling resume that highlights your strengths and increases your chances of landing your dream job.
 
 Get started with ResumeGenie today and take your resume to the next level!
+
 ## Features
 
 - User-friendly interface for creating professional resumes
