@@ -1,5 +1,5 @@
 "use client";
-import { useCallback, useState } from "react";
+import { useCallback, useState, useTransition } from "react";
 import { useDropzone } from "react-dropzone";
 import { Button } from "@/components/ui/button";
 import {
@@ -14,13 +14,14 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Upload, UploadCloud, X } from "lucide-react";
+import { uploadFile } from "@/actions/uploadPDF";
 
 const UploadPDF = () => {
   const [file, setFile] = useState<File | null>(null);
   const [url, setUrl] = useState<string>("");
   const [isButtonEnabled, setisButtonEnabled] = useState<boolean>(false);
-
   const [open, setOpen] = useState(false);
+  const [isPending, startTransition] = useTransition();
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
     const pdfFile = acceptedFiles[0];
@@ -53,7 +54,7 @@ const UploadPDF = () => {
   const handleRemoveFile = () => {
     setFile(null);
     setisButtonEnabled(false);
-  }
+  };
 
   const resetForm = () => {
     setFile(null);
@@ -64,25 +65,54 @@ const UploadPDF = () => {
   const handleOpenDialog = () => {
     setOpen(!open);
     resetForm();
-  }
-
-  const handleFormSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    if (file) {
-      alert("File uploaded successfully");
-      console.log(file);
-      resetForm();
-      setOpen(false);
-    } else if (url) {
-      alert("File uploaded successfully");
-      console.log(url);
-      resetForm();
-      setOpen(false);
-    } else {
-      alert("Please upload a file or enter a URL");
-    }
   };
 
+  const handleFormSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+
+    if (!file && !url) {
+      alert("Please upload a file or enter a URL");
+      return;
+    }
+
+    startTransition(async () => {
+      try {
+        let result;
+        if (file) {
+          const base64 = await new Promise<string>((resolve) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result as string);
+            reader.readAsDataURL(file);
+          });
+
+          result = await uploadFile(
+            {
+              name: file.name,
+              type: file.type,
+              base64: base64,
+            },
+            null
+          );
+        } else {
+          result = await uploadFile(null, url);
+        }
+
+        if (result.success) {
+          alert(
+            "File uploaded successfully. Download URL: " + result.downloadURL
+          );
+          setOpen(false);
+        } else {
+          alert("Error uploading file: " + result.error);
+        }
+      } catch (error) {
+        console.error("Error uploading file:", error);
+        alert("An unexpected error occurred while uploading the file.");
+      } finally {
+        resetForm();
+      }
+    });
+  };
   return (
     <>
       <Dialog open={open} onOpenChange={handleOpenDialog}>
@@ -118,8 +148,9 @@ const UploadPDF = () => {
                     <button
                       type="button"
                       onClick={handleRemoveFile}
-                      className="ml-2 text-gray-400 cursor-pointer">
-                      <X size={20} className="w-4 h-4"/>
+                      className="ml-2 text-gray-400 cursor-pointer"
+                    >
+                      <X size={20} className="w-4 h-4" />
                     </button>
                   </div>
                 ) : (
