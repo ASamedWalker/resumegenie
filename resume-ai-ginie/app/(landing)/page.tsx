@@ -1,8 +1,11 @@
-import { Button } from "@/components/ui/button";
 import LandingPage from "@/components/LandingPage";
+import Navbar from "@/components/Navbar";
 
 export default function Home() {
   return (
-    <LandingPage/>
+    <>
+      <Navbar />
+      <LandingPage />
+    </>
   );
 }

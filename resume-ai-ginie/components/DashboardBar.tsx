@@ -1,12 +1,9 @@
 "use client";
 import React from "react";
-import { BookOpenCheck, ArrowRight } from "lucide-react";
-import { Button } from "./ui/button";
-import { useAuth } from "@clerk/nextjs";
-import Link from "next/link";
+import { BookOpenCheck } from "lucide-react";
+import { UserButton } from "@clerk/nextjs";
 
-const Navbar = () => {
-  const { isSignedIn } = useAuth();
+const DashBoardBar = () => {
 
   return (
     <header className="sticky left-0 top-0 z-50 bg-[#f8f5ee] w-full backdrop-blur border-slate-500/10">
@@ -19,15 +16,11 @@ const Navbar = () => {
             </span>
           </div>
 
-          <Link href={isSignedIn ? "/documents" : "/sign-in"}>
-            <Button variant="link">
-              Get Started <ArrowRight className="h-4 w-4 ml-1" />
-            </Button>
-          </Link>
+         <UserButton afterSignOutUrl="/"/>
         </div>
       </div>
     </header>
   );
 };
 
-export default Navbar;
+export default DashBoardBar;
