@@ -13,15 +13,20 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Upload, UploadCloud, X } from "lucide-react";
-import { uploadFile } from "@/actions/uploadPDF";
+import { Loader2, Upload, UploadCloud, X } from "lucide-react";
+import { uploadPDF } from "@/actions/uploadPDF";
+import { getPDFFileNameFromURL } from "@/lib/utils";
+import { showToast } from "@/lib/utils";
+
+const CORS_PROXY = "https://corsproxy.io/?";
 
 const UploadPDF = () => {
   const [file, setFile] = useState<File | null>(null);
   const [url, setUrl] = useState<string>("");
-  const [isButtonEnabled, setisButtonEnabled] = useState<boolean>(false);
+  const [isButtonEnabled, setIsButtonEnabled] = useState<boolean>(false);
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const [isLoading, setIsLoading] = useState(false);
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
     const pdfFile = acceptedFiles[0];
@@ -35,7 +40,7 @@ const UploadPDF = () => {
     }
 
     setFile(pdfFile);
-    setisButtonEnabled(true);
+    setIsButtonEnabled(true);
     setUrl("");
   }, []);
 
@@ -46,20 +51,27 @@ const UploadPDF = () => {
   });
 
   const handleUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setUrl(e.target.value);
-    setFile(null);
-    setisButtonEnabled(e.target.value.length > 0);
+    const urlValue = e.target.value;
+    setUrl(urlValue);
+
+    const fileName = getPDFFileNameFromURL(urlValue);
+    if (fileName) {
+      setIsButtonEnabled(true);
+      setFile(null); // Clear the file if URL is used
+    } else {
+      setIsButtonEnabled(false);
+    }
   };
 
   const handleRemoveFile = () => {
     setFile(null);
-    setisButtonEnabled(false);
+    setIsButtonEnabled(false);
   };
 
   const resetForm = () => {
     setFile(null);
     setUrl("");
-    setisButtonEnabled(false);
+    setIsButtonEnabled(false);
   };
 
   const handleOpenDialog = () => {
@@ -71,48 +83,95 @@ const UploadPDF = () => {
     e.preventDefault();
 
     if (!file && !url) {
-      alert("Please upload a file or enter a URL");
+      showToast("Please select a file or enter a URL", "warn");
       return;
     }
 
+    setIsLoading(true);
+
     startTransition(async () => {
       try {
-        let result;
         if (file) {
-          const base64 = await new Promise<string>((resolve) => {
-            const reader = new FileReader();
-            reader.onloadend = () => resolve(reader.result as string);
-            reader.readAsDataURL(file);
+          // Convert file to Base64
+          // Convert FileReader to a Promise
+          const readFileAsBase64 = (file: File): Promise<string> => {
+            return new Promise((resolve, reject) => {
+              const reader = new FileReader();
+              reader.readAsDataURL(file);
+              reader.onloadend = () => resolve(reader.result as string);
+              reader.onerror = () => reject(new Error("File reading failed"));
+            });
+          };
+
+          // Read file as Base64
+          const base64File = await readFileAsBase64(file);
+
+          // Upload the file to the server
+          const result = await uploadPDF({
+            fileName: file.name,
+            fileType: file.type,
+            fileData: base64File,
           });
 
-          result = await uploadFile(
-            {
-              name: file.name,
-              type: file.type,
-              base64: base64,
-            },
-            null
-          );
-        } else {
-          result = await uploadFile(null, url);
-        }
+          if (!result.success) {
+            throw new Error(result.error);
+          }
 
-        if (result.success) {
-          alert(
-            "File uploaded successfully. Download URL: " + result.downloadURL
+          showToast(
+            "File uploaded successfully! You can now view the document.",
+            "success"
           );
           setOpen(false);
-        } else {
-          alert("Error uploading file: " + result.error);
+        } else if (url) {
+          // Extract file name from URL
+          const proxyUrl = `${CORS_PROXY}${encodeURIComponent(url)}`;
+          const fileName = getPDFFileNameFromURL(url);
+
+          if (!fileName) {
+            showToast("Invalid URL. Please enter a valid PDF URL", "warn");
+            return;
+          }
+
+          // Simulate a file upload by downloading the PDF and re-uploading
+          const response = await fetch(proxyUrl);
+          if (!response.ok) {
+            throw new Error("Failed to download PDF from URL");
+          }
+
+          const blob = await response.blob();
+          const base64File = await new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(blob);
+            reader.onloadend = () => resolve(reader.result as string);
+            reader.onerror = reject;
+          });
+
+          const result = await uploadPDF({
+            fileName,
+            fileType: blob.type,
+            fileData: base64File,
+          });
+
+          if (!result.success) {
+            throw new Error(result.error);
+          }
+
+          showToast("File uploaded successfully!", "success");
+          setOpen(false);
         }
       } catch (error) {
         console.error("Error uploading file:", error);
-        alert("An unexpected error occurred while uploading the file.");
+        showToast(
+          "An unexpected error occurred while uploading the file.",
+          "error"
+        );
       } finally {
+        setIsLoading(false);
         resetForm();
       }
     });
   };
+
   return (
     <>
       <Dialog open={open} onOpenChange={handleOpenDialog}>
@@ -197,9 +256,16 @@ const UploadPDF = () => {
               <Button
                 variant="orange"
                 type="submit"
-                disabled={!isButtonEnabled}
+                disabled={!isButtonEnabled || isLoading}
               >
-                Upload
+                {isLoading ? (
+                  <Loader2
+                    className="h-5 w-5 text-white/80 animate-spin"
+                    style={{ strokeWidth: "3" }}
+                  />
+                ) : (
+                  `Upload`
+                )}
               </Button>
               <DialogTrigger asChild>
                 <Button variant="light">Cancel</Button>

@@ -1,32 +1,56 @@
-// app/actions/uploadPDF.ts
-'use server'
+'use server';
 
-import { storage } from '@/lib/firebaseConfig';
-import { ref, uploadString, getDownloadURL } from 'firebase/storage';
+import { adminStorage } from '@/lib/firebaseConfig';
+import { auth} from '@clerk/nextjs/server';
+import { Buffer } from 'buffer';
 
-export const uploadFile = async (fileData: { name: string, type: string, base64: string } | null, url: string | null) => {
-  if (fileData) {
-    const { name, type, base64 } = fileData;
-    const timestamp = Date.now();
-    const fileName = `${timestamp}_${name}`;
-    const storageRef = ref(storage, `uploads/${fileName}`);
-    try {
-      const snapshot = await uploadString(storageRef, base64, 'data_url');
-      const downloadURL = await getDownloadURL(snapshot.ref);
-      return { success: true, downloadURL };
-    } catch (error) {
-      console.error("Error uploading file:", error);
-      let errorMessage = 'Failed to upload file';
-      if (error instanceof Error) {
-        errorMessage += `: ${error.message}`;
-      }
-      return { success: false, error: errorMessage };
+interface UploadPDFParams {
+  fileName: string;
+  fileType: string;
+  fileData: string;
+}
+
+export const uploadPDF = async ({
+  fileName,
+  fileType,
+  fileData,
+}: UploadPDFParams) => {
+  try {
+    const { userId }: { userId: string | null } = auth()
+    if (!userId) {
+      throw new Error('User is not authenticated');
     }
-  } else if (url) {
-    // Here you might want to download the file from the URL and then upload it to Firebase
-    // For simplicity, we'll just return the URL
-    return { success: true, downloadURL: url };
-  } else {
-    return { success: false, error: 'No file or URL provided' };
+
+    const timestamp = Date.now();
+    const fullPath = `uploads/${userId}/${timestamp}_${fileName}`;
+
+    // Remove the base64 prefix (e.g., "data:application/pdf;base64,")
+    const base64Data = fileData.split(',')[1];
+
+    // Convert the base64 string to a binary buffer
+    const buffer = Buffer.from(base64Data, 'base64');
+
+    // Create a reference to the file in Firebase Storage
+    const bucket = adminStorage.bucket();
+    const fileRef = bucket.file(fullPath);
+
+    // Upload the buffer to Firebase Storage
+    await fileRef.save(buffer, {
+      contentType: fileType,
+      metadata: {
+        firebaseStorageDownloadTokens: userId,
+      },
+    });
+
+    // Get the download URL
+    const [downloadUrl] = await fileRef.getSignedUrl({
+      action: 'read',
+      expires: Date.now() + 24 * 60 * 60 * 1000, // 24 hours
+    });
+
+    return { success: true, downloadUrl };
+  } catch (error) {
+    console.error('Unexpected error:', error);
+    return { success: false, error: 'Unexpected error occurred' };
   }
 };
