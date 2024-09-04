@@ -15,6 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Loader2, Upload, UploadCloud, X } from "lucide-react";
 import { uploadPDF } from "@/actions/uploadPDF";
+import { processAndStoreEmbeddings } from "@/actions/uploadToFirestore";
 import { getPDFFileNameFromURL } from "@/lib/utils";
 import { showToast } from "@/lib/utils";
 
@@ -91,9 +92,10 @@ const UploadPDF = () => {
 
     startTransition(async () => {
       try {
+        let uploadResult;
+        let fileKey;
+
         if (file) {
-          // Convert file to Base64
-          // Convert FileReader to a Promise
           const readFileAsBase64 = (file: File): Promise<string> => {
             return new Promise((resolve, reject) => {
               const reader = new FileReader();
@@ -103,36 +105,27 @@ const UploadPDF = () => {
             });
           };
 
-          // Read file as Base64
           const base64File = await readFileAsBase64(file);
 
-          // Upload the file to the server
-          const result = await uploadPDF({
+          uploadResult = await uploadPDF({
             fileName: file.name,
             fileType: file.type,
             fileData: base64File,
           });
 
-          if (!result.success) {
-            throw new Error(result.error);
+          if (uploadResult.success) {
+            fileKey = uploadResult.fileKey;
           }
-
-          showToast(
-            "File uploaded successfully! You can now view the document.",
-            "success"
-          );
-          setOpen(false);
         } else if (url) {
-          // Extract file name from URL
-          const proxyUrl = `${CORS_PROXY}${encodeURIComponent(url)}`;
           const fileName = getPDFFileNameFromURL(url);
 
           if (!fileName) {
             showToast("Invalid URL. Please enter a valid PDF URL", "warn");
+            setIsLoading(false);
             return;
           }
 
-          // Simulate a file upload by downloading the PDF and re-uploading
+          const proxyUrl = `${CORS_PROXY}${encodeURIComponent(url)}`;
           const response = await fetch(proxyUrl);
           if (!response.ok) {
             throw new Error("Failed to download PDF from URL");
@@ -146,23 +139,52 @@ const UploadPDF = () => {
             reader.onerror = reject;
           });
 
-          const result = await uploadPDF({
+          uploadResult = await uploadPDF({
             fileName,
             fileType: blob.type,
             fileData: base64File,
           });
 
-          if (!result.success) {
-            throw new Error(result.error);
+          if (uploadResult.success) {
+            fileKey = uploadResult.fileKey;
           }
-
-          showToast("File uploaded successfully!", "success");
-          setOpen(false);
         }
+
+        if (!uploadResult || !uploadResult.success || !fileKey) {
+          throw new Error(uploadResult?.error || "Upload failed");
+        }
+
+        // Generate embeddings using the fileKey
+        const embeddingResult = await processAndStoreEmbeddings(fileKey);
+
+        if (embeddingResult.success) {
+          showToast(
+            "File uploaded and embeddings generated successfully!",
+            "success"
+          );
+          console.log("Embeddings generated and stored successfully");
+          console.log(
+            `Number of embeddings stored: ${embeddingResult.embeddingsCount}`
+          );
+          console.log(
+            `Chroma collection name: ${embeddingResult.collectionName}`
+          );
+          console.log("Sample content from the PDF:");
+          console.log(embeddingResult.sampleContent);
+        } else {
+          console.error("Error generating embeddings:", embeddingResult.error);
+          showToast(
+            `File uploaded, but error generating embeddings: ${embeddingResult.error}`,
+            "error"
+          );
+        }
+        setOpen(false);
       } catch (error) {
-        console.error("Error uploading file:", error);
+        console.error("Error in form submission:", error);
         showToast(
-          "An unexpected error occurred while uploading the file.",
+          `An unexpected error occurred: ${
+            error instanceof Error ? error.message : "Unknown error"
+          }`,
           "error"
         );
       } finally {

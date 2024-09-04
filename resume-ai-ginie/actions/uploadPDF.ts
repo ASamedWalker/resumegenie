@@ -1,8 +1,8 @@
-'use server';
+"use server";
 
-import { adminStorage } from '@/lib/firebaseConfig';
-import { auth} from '@clerk/nextjs/server';
-import { Buffer } from 'buffer';
+import { adminStorage } from "@/lib/firebaseConfig";
+import { auth } from "@clerk/nextjs/server";
+import { Buffer } from "buffer";
 
 interface UploadPDFParams {
   fileName: string;
@@ -16,25 +16,23 @@ export const uploadPDF = async ({
   fileData,
 }: UploadPDFParams) => {
   try {
-    const { userId }: { userId: string | null } = auth()
+    const { userId }: { userId: string | null } = auth();
     if (!userId) {
-      throw new Error('User is not authenticated');
+      throw new Error("User is not authenticated");
     }
 
+    // 1. Generate a unique file name
     const timestamp = Date.now();
-    const fullPath = `uploads/${userId}/${timestamp}_${fileName}`;
+    const uniqueFileName = `${timestamp}_${fileName}`;
+    const fullPath = `uploads/${userId}/${uniqueFileName}`;
 
-    // Remove the base64 prefix (e.g., "data:application/pdf;base64,")
-    const base64Data = fileData.split(',')[1];
+    // 2. Convert base64 data to a buffer
+    const base64Data = fileData.split(",")[1];
+    const buffer = Buffer.from(base64Data, "base64");
 
-    // Convert the base64 string to a binary buffer
-    const buffer = Buffer.from(base64Data, 'base64');
-
-    // Create a reference to the file in Firebase Storage
+    // 3. Upload to Firebase Storage
     const bucket = adminStorage.bucket();
     const fileRef = bucket.file(fullPath);
-
-    // Upload the buffer to Firebase Storage
     await fileRef.save(buffer, {
       contentType: fileType,
       metadata: {
@@ -42,15 +40,18 @@ export const uploadPDF = async ({
       },
     });
 
-    // Get the download URL
+    // 4. Get the download URL
     const [downloadUrl] = await fileRef.getSignedUrl({
-      action: 'read',
+      action: "read",
       expires: Date.now() + 24 * 60 * 60 * 1000, // 24 hours
     });
 
-    return { success: true, downloadUrl };
+    return { success: true, downloadUrl, fullPath, fileKey: uniqueFileName };
   } catch (error) {
-    console.error('Unexpected error:', error);
-    return { success: false, error: 'Unexpected error occurred' };
+    console.error("Unexpected error during PDF upload:", error);
+    if (error instanceof Error) {
+      return { success: false, error: error.message };
+    }
+    return { success: false, error: "Unexpected error occurred during PDF upload" };
   }
 };
