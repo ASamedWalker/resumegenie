@@ -91,6 +91,7 @@ const LandingPage = () => {
               height={500}
               alt="Hero Image"
               className="w-full"
+              priority
             />
           </div>
         </div>
@@ -111,6 +112,7 @@ const LandingPage = () => {
                   width={200}
                   height={200}
                   alt="Feature 1"
+                  style={{width: "auto", height: "auto"}}
                 />
               </div>
               <p className="text-center font-medium text-xl mt-5">
@@ -130,6 +132,7 @@ const LandingPage = () => {
                   width={200}
                   height={200}
                   alt="Feature 2"
+                  style={{width: "auto", height: "auto"}}
                 />
               </div>
               <p className="text-center font-medium text-xl mt-5">
@@ -149,6 +152,7 @@ const LandingPage = () => {
                   width={200}
                   height={200}
                   alt="Feature 3"
+                  style={{width: "auto", height: "auto"}}
                 />
               </div>
               <p className="text-center font-medium text-xl mt-5">Download</p>

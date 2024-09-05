@@ -166,11 +166,16 @@ const UploadPDF = () => {
           console.log(
             `Number of embeddings stored: ${embeddingResult.embeddingsCount}`
           );
-          console.log(
-            `Chroma collection name: ${embeddingResult.collectionName}`
-          );
+          console.log("Full content length:", embeddingResult.fullContent.length);
+          console.log("Number of chunks:", embeddingResult.chunks.length);
+
+          // Log a sample of the content (first 500 characters)
           console.log("Sample content from the PDF:");
-          console.log(embeddingResult.sampleContent);
+          console.log(embeddingResult.fullContent.slice(0, 500) + "...");
+
+          // Log the first chunk
+          console.log("First chunk:");
+          console.log(embeddingResult.chunks[0]);
         } else {
           console.error("Error generating embeddings:", embeddingResult.error);
           showToast(

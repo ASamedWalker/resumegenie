@@ -7,6 +7,42 @@ import { OpenAIEmbeddings } from "@langchain/openai";
 import { supabase } from "@/lib/supabase";
 import { adminStorage } from "@/lib/firebaseConfig";
 
+
+// Function to clean text of invalid characters
+function cleanText(text: string): string {
+  // Remove null bytes and other control characters
+  return text.replace(/[\x00-\x1F\x7F-\x9F]/g, "")
+    // Replace Unicode escape sequences with a space
+    .replace(/\\u[0-9a-fA-F]{4}/g, " ")
+    // Remove any remaining backslashes
+    .replace(/\\/g, "");
+}
+
+async function batchInsertEmbeddings(
+  embeddings,
+  userId,
+  fileKey,
+  chunkContents
+) {
+  const batchSize = 1000; // Adjust based on your needs
+  for (let i = 0; i < embeddings.length; i += batchSize) {
+    const batch = embeddings.slice(i, i + batchSize).map((vector, index) => ({
+      user_id: userId,
+      file_key: fileKey,
+      chunk_index: i + index,
+      content: cleanText(chunkContents[i + index]),
+      embedding: vector,
+    }));
+
+    const { error } = await supabase.from("embeddings").upsert(batch, {
+      onConflict: "user_id,file_key,chunk_index",
+      ignoreDuplicates: false,
+    });
+
+    if (error) throw error;
+  }
+}
+
 export const processAndStoreEmbeddings = async (fileKey: string) => {
   try {
     const { userId }: { userId: string | null } = auth();
@@ -31,10 +67,10 @@ export const processAndStoreEmbeddings = async (fileKey: string) => {
     console.log(`Loaded PDF with ${pages.length} pages`);
 
     // Combine all page content, trim, and split
-    const fullText = pages
+    const fullText = cleanText(pages
       .map((page) => page.pageContent.trim())
       .join(" ")
-      .replace(/\s+/g, " ");
+      .replace(/\s+/g, " "));
 
     // Split the text into chunks
     const textSplitter = new RecursiveCharacterTextSplitter({
@@ -52,30 +88,25 @@ export const processAndStoreEmbeddings = async (fileKey: string) => {
 
     // Generate embeddings for each chunk
     const embeddingVectors = await embeddings.embedDocuments(
-      textChunks.map((chunk) => chunk.pageContent)
+      textChunks.map(chunk => chunk.pageContent)
     );
 
-    // Store embeddings in Supabase
-    const { data, error } = await supabase.from("embeddings").upsert(
-      embeddingVectors.map((vector, index) => ({
-        user_id: userId,
-        file_key: fileKey,
-        chunk_index: index,
-        content: textChunks[index].pageContent,
-        embedding: vector,
-      })),
-      { onConflict: "user_id,file_key,chunk_index", ignoreDuplicates: false }
+    // Store embeddings in Supabase using batch insertion
+    await batchInsertEmbeddings(
+      embeddingVectors,
+      userId,
+      fileKey,
+      textChunks.map(chunk => chunk.pageContent)
     );
-
-    if (error) throw error;
 
     console.log(`Stored ${embeddingVectors.length} embeddings in Supabase`);
 
     return {
       success: true,
       message: "PDF processed and embeddings stored in Supabase",
-      sampleContent: fullText.slice(0, 500) + "...",
+      fullContent: fullText,  // Return the full content instead of a sample
       embeddingsCount: embeddingVectors.length,
+      chunks: textChunks.map(chunk => chunk.pageContent),  // Return all chunks
     };
   } catch (error) {
     console.error("Error in processAndStoreEmbeddings:", error);
