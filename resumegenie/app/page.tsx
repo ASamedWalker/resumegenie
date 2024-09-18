@@ -1,7 +1,8 @@
+import { Button } from "@/components/ui/button";
+import LandingPage from "@/components/LandingPage";
+
 export default function Home() {
   return (
-    <div className="flex flex-col justify-center items-center font-medium">
-      Welcome to ResumeGenie
-    </div>
+    <LandingPage />
   );
 }
